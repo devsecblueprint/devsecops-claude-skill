@@ -1,0 +1,30 @@
+id: DSB-TEST-001
+title: Automated tests execute before security scanning
+family: TEST
+phase: test
+capability: automated-testing
+requirement: >
+  Where a project has automated tests, they must execute and pass before the
+  pipeline proceeds to the Scan phase. Tests appropriate to the workload should be
+  used; tests must not be created solely to satisfy the existence of this phase.
+rationale: >
+  Testing and security scanning are separate engineering concerns. Running tests
+  first fails fast on functional defects and avoids spending scan time and licence
+  capacity on artifacts that were never going to ship.
+applicability:
+  any_of:
+    - testing.unit: true
+    - testing.integration: true
+    - testing.contract: true
+    - testing.infrastructure: true
+framework_mappings:
+  ssdf: [PW.7.2, PW.8.2]
+  owasp_samm: [verification-testing]
+enforcement:
+  default_level: BLOCK
+  automatable: true
+tooling:
+  examples: [pytest, JUnit, Jest, Terratest]
+  prefer_existing_tool: true
+dsb_curriculum: [module-2-1]
+status: active

@@ -1,0 +1,279 @@
+# DSB reference pipeline — GitHub Actions
+#
+# Workload: Node.js service, container artifact, Terraform infrastructure,
+#           deployed to AWS ECS across staging and production.
+#
+# Every security step is annotated with the DSB rule it satisfies. Enforcement
+# level and provenance are stated so a reader can tell what came from DSB and
+# what came from organizational policy.
+#
+# Third-party actions must be pinned to a commit SHA (DSB-SC-002). The two
+# official actions below are pinned. Where this file uses container images for
+# scanners, pin them by digest in production rather than by version tag.
+
+name: delivery
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# DSB-ID-002 (BLOCK, default): least privilege. The workflow gets read access
+# by default; individual jobs widen this only where they must.
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: payments-api
+  AWS_REGION: us-east-1
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────
+  # BUILD — produce the artifact, traceably.
+  # ───────────────────────────────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest        # DSB-BUILD-004 (WARN): ephemeral runner
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0          # DSB-SCAN-003 needs history, not just the tip
+
+      # DSB-BUILD-001 (BLOCK, default): the artifact is traceable to a commit.
+      - id: version
+        run: echo "value=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      # DSB-BUILD-002 (BLOCK, default): `npm ci` installs strictly from the
+      # lockfile. `npm install` would resolve fresh and break repeatability.
+      - run: npm ci
+
+      - run: npm run build
+
+      # DSB-BUILD-003 (WARN, default): SBOM produced at build time, while the
+      # resolved dependency tree still exists.
+      - name: Generate SBOM
+        run: |
+          npx --yes @cyclonedx/cyclonedx-npm@1.19.3 \
+            --output-file sbom.cdx.json
+
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: build-output
+          path: |
+            dist/
+            sbom.cdx.json
+          retention-days: 90      # DSB-EVD-001 (REPORT): evidence retention
+
+  # ───────────────────────────────────────────────────────────────────────
+  # TEST — validate behavior before spending scanner capacity.
+  # DSB-TEST-001 (BLOCK, default): tests gate the Scan phase.
+  # ───────────────────────────────────────────────────────────────────────
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - run: npm ci
+      - run: npm test                       # unit
+      - run: npm run test:integration       # integration
+
+  # ───────────────────────────────────────────────────────────────────────
+  # SCAN — source-layer controls. These need only the repository, so they run
+  # in parallel with test rather than waiting on it.
+  # ───────────────────────────────────────────────────────────────────────
+  scan-source:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write     # SARIF upload only — DSB-EVD-003
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      # DSB-SCAN-003 (BLOCK, default): secret scanning across history.
+      # No `continue-on-error` here: a leaked credential stops delivery.
+      - name: Secret scanning
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 \
+            detect --source=/repo --redact --exit-code 1
+
+      # DSB-SCAN-001 (BLOCK, default): SAST over first-party source.
+      - name: SAST
+        run: |
+          docker run --rm -v "$PWD:/src" returntocorp/semgrep:1.97.0 \
+            semgrep scan --config auto --error --sarif --output /src/semgrep.sarif
+
+      # DSB-SCAN-002 (BLOCK, default): SCA against the resolved dependency
+      # tree. Run against the lockfile, never against a bundled artifact —
+      # bundling destroys the transitive graph SCA depends on.
+      - name: Software composition analysis
+        run: npm audit --audit-level=high
+
+      # DSB-EVD-001 / DSB-EVD-003 (REPORT): findings reach an owning team
+      # rather than living only in build logs.
+      - uses: github/codeql-action/upload-sarif@f09c1c0a94de965c15400f5634aa42fac8fb8f88 # v3.27.5
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+  # ───────────────────────────────────────────────────────────────────────
+  # SCAN — infrastructure layer.
+  # DSB-IAC-001 (BLOCK) and DSB-TEST-002 (BLOCK): validate before apply.
+  # ───────────────────────────────────────────────────────────────────────
+  scan-infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Terraform validate            # DSB-TEST-002
+        run: |
+          terraform -chdir=infra init -backend=false
+          terraform -chdir=infra validate
+
+      - name: IaC security scan             # DSB-IAC-001
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:0.58.1 \
+            config /src/infra --exit-code 1 --severity HIGH,CRITICAL
+
+  # ───────────────────────────────────────────────────────────────────────
+  # SCAN — pipeline configuration is itself attack surface.
+  # DSB-SCAN-005 (WARN, default) and DSB-SC-002 (BLOCK, default).
+  # ───────────────────────────────────────────────────────────────────────
+  scan-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # DSB-SC-002: every third-party action must be pinned to a commit SHA.
+      # A mutable tag lets a third party change what runs with our credentials.
+      - name: Assert actions are SHA-pinned
+        run: |
+          if grep -rEn 'uses: [^@]+@(v[0-9]|main|master)' .github/workflows/; then
+            echo "::error::unpinned action reference (DSB-SC-002)"
+            exit 1
+          fi
+
+      # DSB-EXC-003: controls must not be neutralized inline.
+      - name: Assert no suppressed security steps
+        run: |
+          if grep -rEn '\|\| true|continue-on-error: true' .github/workflows/; then
+            echo "::error::security step suppression detected (DSB-EXC-003)"
+            exit 1
+          fi
+
+  # ───────────────────────────────────────────────────────────────────────
+  # SCAN — container image. Scanned BEFORE push, so a failing image never
+  # reaches a registry anyone can pull from.
+  # DSB-SCAN-004 (BLOCK, default).
+  # ───────────────────────────────────────────────────────────────────────
+  image:
+    needs: [build, test, scan-source, scan-infrastructure, scan-pipeline]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write            # DSB-ID-001: OIDC federation, no static keys
+      packages: write
+      attestations: write        # DSB-ART-003: build provenance
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: build-output
+
+      - run: docker build -t "$IMAGE_NAME:${{ needs.build.outputs.version }}" .
+
+      # DSB-SCAN-004: scan the local image before it is pushed.
+      - name: Container image scan
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.58.1 image \
+            --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
+            "$IMAGE_NAME:${{ needs.build.outputs.version }}"
+
+      # DSB-ID-001 (WARN, default): short-lived federated identity. No
+      # long-lived AWS keys are stored anywhere in this repository.
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # DSB-ART-001 (BLOCK, default): publish to a controlled registry.
+      - id: push
+        run: |
+          docker push "$IMAGE_NAME:${{ needs.build.outputs.version }}"
+          echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' \
+            "$IMAGE_NAME:${{ needs.build.outputs.version }}")" >> "$GITHUB_OUTPUT"
+
+      # DSB-ART-003 (WARN, default): attestable provenance.
+      - uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+
+  # ───────────────────────────────────────────────────────────────────────
+  # DEPLOY — staging.
+  # DSB-DEPLOY-001 (BLOCK): only artifacts that passed reach here, expressed
+  # through `needs`. DSB-ART-004 (BLOCK): deploy by digest, never by tag.
+  # ───────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: staging         # DSB-ID-004: per-environment credentials
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy by digest
+        run: |
+          aws ecs deploy --service payments-api-staging \
+            --image "${{ needs.image.outputs.digest }}"
+
+  # ───────────────────────────────────────────────────────────────────────
+  # POST-DEPLOYMENT SCAN — controls that need a running workload.
+  # DSB-SCAN-006 (WARN, default). Staging only: production is never targeted
+  # without explicit authorization.
+  # ───────────────────────────────────────────────────────────────────────
+  dast:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: DAST against staging
+        run: |
+          docker run --rm ghcr.io/zaproxy/zaproxy:2.15.0 \
+            zap-baseline.py -t "${{ vars.STAGING_URL }}" -I
+
+  # ───────────────────────────────────────────────────────────────────────
+  # DEPLOY — production.
+  # DSB-DEPLOY-002 (BLOCK): the staging-validated artifact is PROMOTED by
+  # digest, not rebuilt. Rebuilding would sever the link between what was
+  # scanned and what runs.
+  # DSB-DEPLOY-003 (WARN): production follows a validated lower environment.
+  # ───────────────────────────────────────────────────────────────────────
+  deploy-production:
+    needs: [image, dast]
+    runs-on: ubuntu-latest
+    environment: production      # DSB-ID-004: distinct credentials + approval
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_PRODUCTION }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Promote the validated artifact
+        run: |
+          aws ecs deploy --service payments-api-production \
+            --image "${{ needs.image.outputs.digest }}"

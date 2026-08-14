@@ -1,0 +1,28 @@
+id: DSB-BUILD-001
+title: Builds execute from version-controlled source
+family: BUILD
+phase: build
+capability: sbom-generation
+requirement: >
+  Every deployable artifact must be produced by an automated build that executes
+  from a specific, identifiable commit in version control, and the resulting
+  artifact must be traceable back to that commit.
+rationale: >
+  An artifact that cannot be traced to a commit cannot be reviewed, reproduced, or
+  attested. Traceability is the precondition for every downstream supply-chain
+  control; without it, scanning results cannot be tied to what was actually shipped.
+applicability:
+  all_of:
+    - source.host: { exists: true }
+framework_mappings:
+  ssdf: [PS.1.1, PS.3.1]
+  slsa: [build-L1]
+  cncf_supply_chain: [build-integrity]
+enforcement:
+  default_level: BLOCK
+  automatable: true
+tooling:
+  examples: [Syft, CycloneDX, native CI build metadata]
+  prefer_existing_tool: true
+dsb_curriculum: [module-2-1, module-2-4]
+status: active

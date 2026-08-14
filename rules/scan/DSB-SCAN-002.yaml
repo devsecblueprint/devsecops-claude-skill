@@ -1,0 +1,27 @@
+id: DSB-SCAN-002
+title: Software composition analysis
+family: SCAN
+phase: scan
+capability: software-composition-analysis
+requirement: >
+  Third-party dependencies resolved during the build must be analysed for known
+  vulnerabilities before the resulting artifact is promoted.
+rationale: >
+  The majority of code in a typical deployable artifact is third-party. Analysing
+  only first-party source leaves most of the attack surface unexamined.
+applicability:
+  any_of:
+    - package_managers: { exists: true }
+    - artifacts.package: true
+framework_mappings:
+  ssdf: [PW.4.1, RV.1.1]
+  owasp_cicd: [CICD-SEC-3]
+  cncf_supply_chain: [dependency-management]
+enforcement:
+  default_level: BLOCK
+  automatable: true
+tooling:
+  examples: [Black Duck, Snyk, Dependabot, Trivy, OWASP Dependency-Check]
+  prefer_existing_tool: true
+dsb_curriculum: [module-2-2, module-2-4]
+status: active

@@ -1,0 +1,17 @@
+# Ownership for The DSB DevSecOps Engineering Skill.
+# See MAINTAINERS.md. Later matches win, so the narrow rules come last.
+
+* @damienjburks
+
+# SKILL.md is the product. Every change to it is a change to guidance that
+# reaches users directly.
+/SKILL.md @damienjburks
+
+# Rule content and the registries rules are validated against.
+/rules/ @damienjburks
+/references/ @damienjburks
+/schema/ @damienjburks
+
+# Licensing and contributor terms.
+/LICENSE.md @damienjburks
+/docs/legal/ @damienjburks

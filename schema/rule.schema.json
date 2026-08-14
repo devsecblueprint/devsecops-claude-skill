@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecblueprint.com/schema/rule.schema.json",
+  "title": "DSB Rule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id", "title", "family", "phase", "capability",
+    "requirement", "rationale", "applicability",
+    "framework_mappings", "enforcement", "tooling",
+    "dsb_curriculum", "status"
+  ],
+  "$defs": {
+    "atom": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": {
+        "oneOf": [
+          { "type": ["string", "boolean", "number"] },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "in": { "type": "array", "minItems": 1 },
+              "exists": { "type": "boolean" }
+            },
+            "minProperties": 1,
+            "maxProperties": 1
+          }
+        ]
+      }
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DSB-(BUILD|TEST|SCAN|DEPLOY|ID|SRC|SC|ART|IAC|EVD|EXC)-[0-9]{3}$"
+    },
+    "title": { "type": "string", "minLength": 5 },
+    "family": {
+      "type": "string",
+      "enum": ["BUILD", "TEST", "SCAN", "DEPLOY", "ID", "SRC", "SC", "ART", "IAC", "EVD", "EXC"]
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["build", "test", "scan", "deploy", "post-deploy", "cross-cutting"]
+    },
+    "capability": { "type": "string" },
+    "requirement": { "type": "string", "minLength": 20 },
+    "rationale": { "type": "string", "minLength": 20 },
+
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "all_of": { "type": "array", "items": { "$ref": "#/$defs/atom" }, "minItems": 1 },
+        "any_of": { "type": "array", "items": { "$ref": "#/$defs/atom" }, "minItems": 1 },
+        "none_of": { "type": "array", "items": { "$ref": "#/$defs/atom" }, "minItems": 1 }
+      }
+    },
+
+    "framework_mappings": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "ssdf": { "type": "array", "items": { "type": "string" } },
+        "slsa": { "type": "array", "items": { "type": "string" } },
+        "owasp_cicd": { "type": "array", "items": { "type": "string" } },
+        "owasp_samm": { "type": "array", "items": { "type": "string" } },
+        "cncf_supply_chain": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "enforcement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_level", "automatable"],
+      "properties": {
+        "default_level": { "type": "string", "enum": ["BLOCK", "WARN", "REPORT"] },
+        "automatable": { "type": "boolean" },
+        "overridable_by": { "type": "string", "pattern": "^DSB-EXC-[0-9]{3}$" }
+      }
+    },
+
+    "tooling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prefer_existing_tool"],
+      "properties": {
+        "examples": { "type": "array", "items": { "type": "string" } },
+        "prefer_existing_tool": { "type": "boolean" }
+      }
+    },
+
+    "dsb_curriculum": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^module-[0-9]+-[0-9]+$" }
+    },
+
+    "status": { "type": "string", "enum": ["active", "draft", "deprecated"] }
+  }
+}

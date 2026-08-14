@@ -1,0 +1,67 @@
+name: Bug report
+description: Wrong guidance, bad generated pipeline, or broken tooling
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the problem is that generated configuration would introduce a real
+        security weakness, report it privately instead — see
+        [SECURITY.md](https://github.com/devsecblueprint/devsecops-claude-skill/blob/main/SECURITY.md).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where is the problem
+      options:
+        - Skill guidance — it recommended the wrong thing
+        - Generated pipeline — the output is broken or insecure
+        - Rule content — a rule is wrong, unclear, or contradicts the curriculum
+        - Tooling — validate_skill.py, generate_mappings.py, or tests
+        - Documentation
+    validations:
+      required: true
+
+  - type: input
+    id: rule_id
+    attributes:
+      label: Rule ID
+      description: If a specific rule is involved.
+      placeholder: DSB-SCAN-006
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened
+      description: |
+        For skill behavior, include what you asked and what the agent produced.
+        Paste the relevant part of the output rather than describing it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+      description: And why — which rule or principle does the current behavior violate?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Workload context
+      description: |
+        Stack, CI/CD platform, artifact types, deployment target. The skill's answers
+        are workload-driven, so the same question has different correct answers.
+      placeholder: |
+        Language: Java 21 / Maven
+        CI: Jenkins
+        Artifacts: container image
+        Deploy: OpenShift, three environments
+
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+      placeholder: Claude Code 2.x

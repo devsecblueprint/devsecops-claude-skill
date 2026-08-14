@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devsecblueprint.com/schema/workload-profile.schema.json",
+  "title": "DSB Workload Profile",
+  "description": "Closed vocabulary of facts the DSB rule catalog may reason about.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "tristate": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "const": "unknown" }
+      ]
+    },
+    "control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool"],
+      "properties": {
+        "tool": { "type": "string" },
+        "owner": { "type": "string" },
+        "scope": { "type": "string", "enum": ["full", "partial", "unknown"] }
+      }
+    }
+  },
+  "properties": {
+    "id": { "type": "string" },
+    "description": { "type": "string" },
+
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "host": { "type": "string", "enum": ["github", "gitlab", "bitbucket", "azure-repos", "other", "unknown"] },
+        "protected_branches": { "$ref": "#/$defs/tristate" },
+        "review_required": { "$ref": "#/$defs/tristate" }
+      }
+    },
+
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "package_managers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "container": { "$ref": "#/$defs/tristate" },
+        "package": { "$ref": "#/$defs/tristate" },
+        "binary": { "$ref": "#/$defs/tristate" },
+        "iac_plan": { "$ref": "#/$defs/tristate" },
+        "helm_chart": { "$ref": "#/$defs/tristate" }
+      }
+    },
+
+    "iac": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "present": { "$ref": "#/$defs/tristate" },
+        "tools": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kubernetes": { "$ref": "#/$defs/tristate" },
+        "serverless": { "$ref": "#/$defs/tristate" },
+        "vm": { "$ref": "#/$defs/tristate" },
+        "paas": { "$ref": "#/$defs/tristate" }
+      }
+    },
+
+    "deploy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "targets": { "type": "array", "items": { "type": "string" } },
+        "environments": { "type": "array", "items": { "type": "string" } },
+        "promotion_model": { "type": "string", "enum": ["rebuild", "promote", "unknown"] }
+      }
+    },
+
+    "cicd": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "platform": { "type": "string", "enum": ["github-actions", "jenkins", "gitlab-ci", "azure-devops", "other", "unknown"] },
+        "runners": { "type": "string", "enum": ["hosted", "self-hosted", "mixed", "unknown"] }
+      }
+    },
+
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mechanism": { "type": "string", "enum": ["oidc", "static-creds", "vault", "cloud-role", "other", "unknown"] }
+      }
+    },
+
+    "testing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unit": { "$ref": "#/$defs/tristate" },
+        "integration": { "$ref": "#/$defs/tristate" },
+        "contract": { "$ref": "#/$defs/tristate" },
+        "infrastructure": { "$ref": "#/$defs/tristate" }
+      }
+    },
+
+    "existing_controls": {
+      "type": "object",
+      "description": "Capability name -> list of tools already providing it. Resolution concern only; never referenced by applicability predicates.",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/control" }
+      }
+    },
+
+    "ownership": {
+      "type": "object",
+      "description": "Capability name -> owning process. Resolution concern only; never referenced by applicability predicates.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["app-pipeline", "platform-team", "external-governed", "none", "unknown"]
+      }
+    },
+
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enforcement_posture": { "type": "string", "enum": ["strict", "balanced", "advisory", "unknown"] },
+        "exception_process": { "$ref": "#/$defs/tristate" },
+        "compliance_regimes": { "type": "array", "items": { "type": "string" } },
+        "dast_prod_authorized": { "$ref": "#/$defs/tristate" }
+      }
+    }
+  }
+}

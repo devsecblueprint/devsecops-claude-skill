@@ -1,0 +1,42 @@
+# Snapshot of The DevSec Blueprint curriculum index.
+# Source of truth: frontend/lib/curriculum-data.ts in devsecblueprint/devsecblueprint.
+# Refresh procedure is documented in CONTRIBUTING.md.
+#
+# Module names are quoted: several contain '?', which YAML flow mappings reject.
+source: https://github.com/devsecblueprint/devsecblueprint/blob/main/frontend/lib/curriculum-data.ts
+snapshot_date: "2026-08-12"
+
+stages:
+  - id: stage-1
+    name: "Know Before You Go"
+    modules:
+      - { id: module-1-1, name: "Prerequisites" }
+      - { id: module-1-2, name: "Soft Skills" }
+
+  - id: stage-2
+    name: "DevSecOps"
+    modules:
+      - { id: module-2-1, name: "What is the Secure SDLC?" }
+      - { id: module-2-2, name: "What is Application Security?" }
+      - { id: module-2-3, name: "Secure Coding Overview" }
+      - { id: module-2-4, name: "DevSecOps Fundamentals" }
+      - { id: module-2-5, name: "Threat Modeling Fundamentals" }
+      - { id: module-2-6, name: "Container Security Overview" }
+      - { id: module-2-7, name: "DevSecOps Capstone" }
+
+  - id: stage-3
+    name: "Cloud Security Development"
+    modules:
+      - { id: module-3-1, name: "What is Cloud Security Development?" }
+      - { id: module-3-2, name: "IAM Fundamentals" }
+      - { id: module-3-3, name: "API Patterns and SDKs" }
+      - { id: module-3-4, name: "Secrets Management In The Cloud" }
+      - { id: module-3-5, name: "Cloud Logging and Monitoring" }
+      - { id: module-3-6, name: "Serverless" }
+      - { id: module-3-7, name: "IaC Security" }
+      - { id: module-3-8, name: "Cloud Security Development Capstone" }
+
+  - id: stage-4
+    name: "Career Strategy"
+    modules:
+      - { id: module-4-1, name: "Career Strategy" }

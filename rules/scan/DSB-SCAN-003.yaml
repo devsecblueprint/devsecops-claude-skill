@@ -1,0 +1,26 @@
+id: DSB-SCAN-003
+title: Secret scanning of source and history
+family: SCAN
+phase: scan
+capability: secret-scanning
+requirement: >
+  Source repositories feeding the delivery pipeline must be scanned for committed
+  credentials, tokens, and other secrets.
+rationale: >
+  A committed secret is disclosed to everyone with repository access and remains in
+  history after deletion. Detection must be automated because the exposure window
+  begins at push time, not at review time.
+applicability:
+  all_of:
+    - source.host: { in: [github, gitlab, bitbucket, azure-repos, other] }
+framework_mappings:
+  ssdf: [PO.5.2, PS.1.1]
+  owasp_cicd: [CICD-SEC-6]
+enforcement:
+  default_level: BLOCK
+  automatable: true
+tooling:
+  examples: [Gitleaks, TruffleHog, GitHub secret scanning, Checkmarx]
+  prefer_existing_tool: true
+dsb_curriculum: [module-2-3, module-3-4]
+status: active

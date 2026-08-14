@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Local-only helper for enabling, disabling, and installing the skill during
+# development. Not part of the distributed skill.
+/skillctl

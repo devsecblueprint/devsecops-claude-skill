@@ -1,0 +1,31 @@
+id: DSB-SCAN-004
+title: Container image vulnerability scanning
+family: SCAN
+phase: scan
+capability: container-image-scanning
+requirement: >
+  Container images built or consumed by the delivery pipeline must be scanned for
+  known vulnerabilities in operating system packages and application dependencies
+  before promotion to a deployable registry.
+rationale: >
+  Base images accumulate CVEs independently of application code. Scanning only
+  source dependencies leaves the majority of a container's attack surface
+  unexamined.
+applicability:
+  all_of:
+    - artifacts.container: true
+  none_of:
+    - runtime.serverless: true
+framework_mappings:
+  ssdf: [PW.4.1, RV.1.1]
+  slsa: [build-L2]
+  owasp_cicd: [CICD-SEC-4]
+  cncf_supply_chain: [artifact-verification]
+enforcement:
+  default_level: BLOCK
+  automatable: true
+tooling:
+  examples: [Trivy, Grype, Prisma Cloud, Black Duck, Wiz]
+  prefer_existing_tool: true
+dsb_curriculum: [module-2-6, module-3-1]
+status: active

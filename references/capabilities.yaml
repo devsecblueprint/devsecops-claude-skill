@@ -1,0 +1,83 @@
+# DSB capability registry.
+# Capabilities are vendor-neutral. Tools named anywhere in this repository are
+# illustrative examples only and never constitute a DSB requirement.
+capabilities:
+  - id: sast
+    group: application-and-repository
+    summary: Static analysis of first-party source code for security defects.
+    typical_phase: scan
+
+  - id: software-composition-analysis
+    group: application-and-repository
+    summary: Identification of known vulnerabilities in third-party dependencies.
+    typical_phase: scan
+
+  - id: secret-scanning
+    group: application-and-repository
+    summary: Detection of credentials and other secrets committed to source control.
+    typical_phase: scan
+
+  - id: license-compliance-analysis
+    group: application-and-repository
+    summary: Analysis of dependency licenses against organizational policy.
+    typical_phase: scan
+
+  - id: iac-scanning
+    group: infrastructure-and-platform
+    summary: Static analysis of infrastructure-as-code for insecure configuration.
+    typical_phase: scan
+
+  - id: kubernetes-configuration-scanning
+    group: infrastructure-and-platform
+    summary: Analysis of Kubernetes manifests and cluster configuration.
+    typical_phase: scan
+
+  - id: policy-as-code-enforcement
+    group: infrastructure-and-platform
+    summary: Programmatic enforcement of organizational policy against configuration.
+    typical_phase: scan
+
+  - id: pipeline-configuration-scanning
+    group: infrastructure-and-platform
+    summary: Analysis of CI/CD configuration for insecure pipeline practices.
+    typical_phase: scan
+
+  - id: container-image-scanning
+    group: artifact-and-supply-chain
+    summary: Vulnerability scanning of container images including base OS packages.
+    typical_phase: scan
+
+  - id: sbom-generation
+    group: artifact-and-supply-chain
+    summary: Production of a software bill of materials for a built artifact.
+    typical_phase: build
+
+  - id: artifact-integrity-verification
+    group: artifact-and-supply-chain
+    summary: Verification that a deployed artifact is the one that passed the pipeline.
+    typical_phase: deploy
+
+  - id: artifact-signing
+    group: artifact-and-supply-chain
+    summary: Cryptographic signing of build artifacts.
+    typical_phase: build
+
+  - id: build-provenance
+    group: artifact-and-supply-chain
+    summary: Attestation describing how, where, and from what an artifact was built.
+    typical_phase: build
+
+  - id: dast
+    group: dynamic-and-post-deployment
+    summary: Dynamic security testing against a running instance of the workload.
+    typical_phase: post-deploy
+
+  - id: api-security-testing
+    group: dynamic-and-post-deployment
+    summary: Security testing of API surfaces against a running instance.
+    typical_phase: post-deploy
+
+  - id: automated-testing
+    group: engineering
+    summary: Automated functional validation of the built artifact. Not a security control.
+    typical_phase: test

@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  # DSB-SC-002 requires third-party actions to be pinned to an immutable commit
+  # SHA. Dependabot updates the SHA and the trailing version comment together,
+  # which is what keeps pinning maintainable rather than a one-time gesture.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: pip
+    directory: "/tools"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps"

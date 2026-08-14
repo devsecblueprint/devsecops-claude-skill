@@ -1,0 +1,17 @@
+blank_issues_enabled: true
+contact_links:
+  - name: DSB Discord
+    url: https://discord.gg/enMmUNq8jc
+    about: Questions about the methodology, the curriculum, or how to apply a rule.
+
+  - name: Report a security issue
+    url: https://github.com/devsecblueprint/devsecops-claude-skill/security/advisories/new
+    about: Report privately. Do not open a public issue for a security problem.
+
+  - name: Methodology change
+    url: https://github.com/devsecblueprint/devsecblueprint/issues/new
+    about: The four phases and baseline principles come from DSB curriculum — raise those on the platform repository.
+
+  - name: Commercial licensing
+    url: https://github.com/devsecblueprint/devsecops-claude-skill/blob/main/docs/legal/COMMERCIAL-LICENSING.md
+    about: Using this inside a company requires prior written authorization.

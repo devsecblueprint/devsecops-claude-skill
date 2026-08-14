@@ -1,0 +1,271 @@
+// DSB reference pipeline — Jenkins
+//
+// Workload: Java service, Maven, container artifact, deployed to OpenShift.
+// Existing organizational security products: Checkmarx (SAST), Black Duck (SCA),
+// Prisma Cloud (container image scanning).
+//
+// The defining property of this pipeline is what it does NOT contain. Three DSB
+// capabilities are satisfied by tools the organization already owns, so no
+// additional scanner is introduced. Adding Trivy alongside Prisma Cloud, or Snyk
+// alongside Black Duck, would be a defect under DSB principles 5-7.
+//
+// Per-repository Jenkinsfiles should stay thin and call a shared library, so a
+// security policy change does not require a pull request against every service.
+
+@Library('platform-pipeline@v3') _
+
+pipeline {
+    // DSB-BUILD-004 (WARN, default): ephemeral agents. Static nodes accumulate
+    // credentials and caches across builds; one compromised build then
+    // contaminates every later one.
+    agent {
+        kubernetes {
+            yamlFile 'ci/pod-maven-jdk21.yaml'
+        }
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '50'))  // DSB-EVD-001 (REPORT)
+        timestamps()                                     // DSB-EVD-002 (REPORT)
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        SERVICE = 'payments-api'
+        // DSB-ID-003 (BLOCK, default): credentials come from the credential
+        // store, never from source. Nothing secret appears in this file.
+        REGISTRY = credentials('artifactory-registry-url')
+    }
+
+    stages {
+
+        // ───────────────────────────────────────────────────────────────
+        // BUILD
+        // ───────────────────────────────────────────────────────────────
+        stage('Build') {
+            steps {
+                script {
+                    // DSB-BUILD-001 (BLOCK, default): the artifact is traceable
+                    // to a commit. Artifactory build-info is the audit spine.
+                    env.VERSION = "1.4.0-${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                }
+
+                // DSB-BUILD-002 (BLOCK, default) and DSB-SC-001 (WARN, default):
+                // resolve through a single Artifactory virtual repository rather
+                // than reaching public registries directly. This gives an
+                // inventory of what actually entered the build and is the only
+                // place a malicious package can be stopped before compilation.
+                rtMavenRun(
+                    tool: 'maven-3.9',
+                    pom: 'pom.xml',
+                    goals: "versions:set -DnewVersion=${env.VERSION} clean install -DskipITs",
+                    deployerId: 'DEPLOYER',
+                    resolverId: 'RESOLVER'
+                )
+
+                rtPublishBuildInfo(serverId: 'artifactory')
+
+                // DSB-BUILD-003 (WARN, default): SBOM at build time, while the
+                // resolved dependency tree still exists.
+                sh 'mvn org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom'
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────────
+        // TEST — DSB-TEST-001 (BLOCK, default). Tests gate Scan so scanner
+        // licence capacity is not spent on artifacts that will not ship.
+        // ───────────────────────────────────────────────────────────────
+        stage('Test') {
+            steps {
+                sh 'mvn verify -DskipUTs'
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                    junit '**/target/failsafe-reports/*.xml'
+                }
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────────
+        // SCAN — source layer. Parallel because these are independent.
+        //
+        // Every control here REUSES an existing organizational product.
+        // ───────────────────────────────────────────────────────────────
+        stage('Scan') {
+            parallel {
+
+                // DSB-SCAN-001 (BLOCK, default) — REUSE: Checkmarx.
+                // Incremental on pull requests; a full scan is too slow to gate
+                // merges, and "new findings only" is what makes SAST survivable.
+                stage('SAST') {
+                    steps {
+                        checkmarxScan(
+                            projectName: env.SERVICE,
+                            incremental: env.CHANGE_ID != null,
+                            vulnerabilityThresholdResult: 'FAILURE',
+                            highThreshold: 0
+                        )
+                    }
+                }
+
+                // DSB-SCAN-002 (BLOCK, default) — REUSE: Black Duck.
+                // Detector-based against the Maven tree, NOT signature scanning
+                // of the packaged jar. Shading destroys the transitive graph
+                // that makes composition analysis accurate.
+                stage('SCA') {
+                    steps {
+                        synopsys_detect """
+                            --detect.project.name=${env.SERVICE}
+                            --detect.project.version.name=${env.VERSION}
+                            --detect.tools=DETECTOR
+                            --detect.blackduck.signature.scanner.disabled=true
+                            --detect.policy.check.fail.on.severities=CRITICAL,BLOCKER
+                        """
+                    }
+                }
+
+                // DSB-SCAN-003 (BLOCK, default).
+                // NOTE: if secret scanning is owned by a platform team via a
+                // server-side hook, this control is DELEGATED — document the
+                // boundary and remove this stage rather than duplicating it.
+                stage('Secrets') {
+                    steps {
+                        sh 'gitleaks detect --source . --redact --exit-code 1'
+                    }
+                }
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────────
+        // SCAN — container image. DSB-SCAN-004 (BLOCK, default) — REUSE:
+        // Prisma Cloud. Scanned BEFORE push, so a failing image never lands
+        // in a registry where something can pull it.
+        // ───────────────────────────────────────────────────────────────
+        stage('Image') {
+            steps {
+                // Pull the published jar back down rather than using target/.
+                // This guarantees the image contains the exact artifact
+                // Artifactory holds, not a local rebuild (DSB-BUILD-001).
+                rtDownload(
+                    serverId: 'artifactory',
+                    spec: """{"files":[{
+                        "pattern": "maven-local/com/dsb/${env.SERVICE}/${env.VERSION}/*.jar",
+                        "target": "build/"
+                    }]}"""
+                )
+
+                sh "podman build -t ${env.SERVICE}:${env.VERSION} ."
+
+                // Gate before push. No `|| true` — DSB-EXC-003 (BLOCK, default)
+                // forbids neutralizing a security step inline. A suppressed
+                // control is worse than no control: it manufactures assurance.
+                sh """
+                    twistcli images scan \
+                        --address \$PRISMA_URL \
+                        --details \
+                        --vulnerability-threshold critical \
+                        ${env.SERVICE}:${env.VERSION}
+                """
+
+                // DSB-ART-001 (BLOCK, default): controlled registry.
+                sh "podman push ${env.SERVICE}:${env.VERSION}"
+
+                script {
+                    // DSB-ART-004 (BLOCK, default): capture the digest. Tags are
+                    // mutable; digests are not.
+                    env.DIGEST = sh(
+                        script: "podman inspect --format '{{.Digest}}' ${env.SERVICE}:${env.VERSION}",
+                        returnStdout: true
+                    ).trim()
+                }
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────────
+        // DEPLOY — DSB-DEPLOY-001 (BLOCK): reached only if every prior stage
+        // passed. DSB-DEPLOY-002 (BLOCK): promote, never rebuild.
+        // ───────────────────────────────────────────────────────────────
+        stage('Promote and deploy to staging') {
+            when { branch 'main' }
+            steps {
+                rtPromote(
+                    serverId: 'artifactory',
+                    buildName: env.JOB_NAME,
+                    buildNumber: env.BUILD_NUMBER,
+                    targetRepo: 'docker-staging-local'
+                )
+
+                // DSB-ART-004: deploy by digest, never by tag.
+                // DSB-ID-002 / DSB-ID-004 (BLOCK): the OpenShift service account
+                // is scoped to this namespace only. Staging credentials cannot
+                // reach production.
+                withCredentials([string(credentialsId: 'openshift-staging-token',
+                                        variable: 'TOKEN')]) {
+                    sh """
+                        helm upgrade --install ${env.SERVICE} deploy/helm \
+                            --set image.digest=${env.DIGEST} \
+                            --namespace payments-staging
+                    """
+                }
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────────
+        // POST-DEPLOYMENT — DSB-SCAN-006 (WARN, default). Staging only.
+        // Production is never targeted without explicit authorization.
+        // ───────────────────────────────────────────────────────────────
+        stage('DAST against staging') {
+            when { branch 'main' }
+            steps {
+                sh 'zap-baseline.py -t $STAGING_URL -I'
+            }
+        }
+
+        // ───────────────────────────────────────────────────────────────
+        // DEPLOY — production. DSB-DEPLOY-003 (WARN): follows a validated
+        // lower environment. The same digest is promoted again.
+        // ───────────────────────────────────────────────────────────────
+        stage('Promote to production') {
+            when { branch 'main' }
+            steps {
+                // Explicit human gate. Consider instead writing the digest to a
+                // manifest repository and letting a GitOps controller reconcile
+                // it — that removes production cluster credentials from Jenkins
+                // entirely, which matters because Jenkins holds access to source,
+                // registries, and every cluster (DSB-ID-002, principle 16).
+                input message: "Promote ${env.VERSION} to production?", ok: 'Promote'
+
+                rtPromote(
+                    serverId: 'artifactory',
+                    buildName: env.JOB_NAME,
+                    buildNumber: env.BUILD_NUMBER,
+                    targetRepo: 'docker-production-local'
+                )
+
+                withCredentials([string(credentialsId: 'openshift-production-token',
+                                        variable: 'TOKEN')]) {
+                    sh """
+                        helm upgrade --install ${env.SERVICE} deploy/helm \
+                            --set image.digest=${env.DIGEST} \
+                            --namespace payments-production
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            // DSB-EVD-001 (REPORT): control results retained as evidence,
+            // associated with the artifact and commit they describe.
+            archiveArtifacts artifacts: 'target/*.json, **/bom.xml',
+                             allowEmptyArchive: true
+        }
+        failure {
+            // DSB-EVD-003 (REPORT): findings reach the owning team. A finding
+            // visible only in a Jenkins tab is not a finding.
+            notifyTeam(service: env.SERVICE, result: 'FAILURE')
+        }
+    }
+}

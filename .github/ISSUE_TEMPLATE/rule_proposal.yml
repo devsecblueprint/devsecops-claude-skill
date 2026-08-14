@@ -1,0 +1,111 @@
+name: Rule proposal
+description: Propose a new DSB rule, or a change to an existing one
+labels: ["rule", "needs-discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A rule change is a change to engineering guidance other people will apply to
+        production pipelines. Open this before writing the pull request.
+
+        Rules define **capabilities and outcomes, never vendors.** A proposal that
+        requires a specific product will be declined regardless of how good that
+        product is.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Proposal type
+      options:
+        - New rule
+        - Change an existing rule
+        - Deprecate a rule
+    validations:
+      required: true
+
+  - type: input
+    id: rule_id
+    attributes:
+      label: Existing rule ID
+      description: For changes and deprecations. Leave blank for a new rule.
+      placeholder: DSB-SCAN-004
+
+  - type: textarea
+    id: requirement
+    attributes:
+      label: Requirement
+      description: What must be true, stated as an outcome rather than an implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: |
+        The engineering reason. What goes wrong without this control, concretely?
+        This is the part people actually read.
+    validations:
+      required: true
+
+  - type: textarea
+    id: applicability
+    attributes:
+      label: Applicability
+      description: |
+        When does this risk exist? State it against Workload Profile fields.
+
+        Then answer the question that matters: **what workload would make this rule
+        Not Applicable?** If you cannot answer, the rule is probably too broad.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: enforcement
+    attributes:
+      label: Proposed default enforcement
+      options:
+        - BLOCK — shipping past a finding is the wrong outcome
+        - WARN — surface it, do not stop delivery
+        - REPORT — generate evidence only
+    validations:
+      required: true
+
+  - type: input
+    id: capability
+    attributes:
+      label: Capability
+      description: Must exist in references/capabilities.yaml, or say why it is genuinely new.
+      placeholder: container-image-scanning
+    validations:
+      required: true
+
+  - type: input
+    id: mappings
+    attributes:
+      label: Framework mappings
+      description: At least one of SSDF, SLSA, OWASP CI/CD, OWASP SAMM, CNCF.
+      placeholder: SSDF PW.4.1 · SLSA build-L2 · OWASP CICD-SEC-4
+    validations:
+      required: true
+
+  - type: input
+    id: curriculum
+    attributes:
+      label: DSB curriculum module
+      description: Which module teaches this concept? Must exist in references/dsb-curriculum.yaml.
+      placeholder: module-2-6
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirms
+    attributes:
+      label: Confirmations
+      options:
+        - label: This does not require a specific vendor or product
+          required: true
+        - label: Applicability does not reference ownership or existing_controls
+          required: true
+        - label: This does not contradict the DSB curriculum
+          required: true

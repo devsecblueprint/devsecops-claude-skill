@@ -1,0 +1,27 @@
+id: DSB-SCAN-001
+title: Static application security testing
+family: SCAN
+phase: scan
+capability: sast
+requirement: >
+  First-party source code must be analysed for security defects before the
+  resulting artifact is promoted to a deployable state.
+rationale: >
+  SAST identifies defect classes that dependency and runtime analysis cannot see,
+  and it does so at the earliest technically valid stage, when the code is present
+  and the cost of remediation is lowest.
+applicability:
+  all_of:
+    - languages: { exists: true }
+framework_mappings:
+  ssdf: [PW.7.1, PW.8.1]
+  owasp_samm: [verification-security-testing]
+  owasp_cicd: [CICD-SEC-1]
+enforcement:
+  default_level: BLOCK
+  automatable: true
+tooling:
+  examples: [Semgrep, Checkmarx, SonarQube, CodeQL]
+  prefer_existing_tool: true
+dsb_curriculum: [module-2-2, module-2-3]
+status: active
