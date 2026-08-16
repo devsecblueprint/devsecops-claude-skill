@@ -1,6 +1,6 @@
 # Snapshot of The DevSec Blueprint curriculum index.
 # Source of truth: frontend/lib/curriculum-data.ts in devsecblueprint/devsecblueprint.
-# Refresh procedure is documented in CONTRIBUTING.md.
+# Refresh procedure is documented in docs/CONTRIBUTING.md.
 #
 # Module names are quoted: several contain '?', which YAML flow mappings reject.
 source: https://github.com/devsecblueprint/devsecblueprint/blob/main/frontend/lib/curriculum-data.ts

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate references/framework-mappings.md from SKILL.md.
+"""Generate docs/framework-mappings.md from SKILL.md.
 
 The per-rule mappings in SKILL.md are the source of truth. This script inverts
 them into a framework-first index, so an auditor asking "which DSB rules cover
@@ -24,7 +24,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 from validate_skill import ROOT, SKILL, parse_rules  # noqa: E402
 
-OUTPUT = ROOT / "references" / "framework-mappings.md"
+OUTPUT = ROOT / "docs" / "framework-mappings.md"
 
 # Order matters: "OWASP SAMM" must be tested before the bare "OWASP " prefix,
 # which is how OWASP CI/CD controls are written.
@@ -140,7 +140,7 @@ def render(rules):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate references/framework-mappings.md from SKILL.md.",
+        description="Generate docs/framework-mappings.md from SKILL.md.",
         epilog="Example: python tools/generate_mappings.py --check",
     )
     parser.add_argument("--check", action="store_true",

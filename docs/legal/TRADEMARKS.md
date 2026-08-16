@@ -1,6 +1,6 @@
 # Trademark and Brand Policy
 
-The software license for this repository does not grant rights to use The DevSec Blueprint's names, logos, marks, or branding.
+The software in this repository is MIT licensed. That license covers the code and does **not** grant rights to use The DevSec Blueprint's names, logos, marks, branding, or curriculum content.
 
 ## Protected DSB branding
 

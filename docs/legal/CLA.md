@@ -22,7 +22,7 @@ You grant DSB and its successors and assigns a worldwide, perpetual, irrevocable
 
 This grant includes the right to distribute or license your Contribution:
 
-- under the PolyForm Noncommercial License or another source-available license;
+- under the MIT License or another open-source or source-available license;
 - under a proprietary or commercial license;
 - as part of a hosted, subscription, membership, training, certification, consulting, or educational offering;
 - under different or additional terms in the future; and

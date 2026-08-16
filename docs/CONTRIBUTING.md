@@ -10,8 +10,8 @@ outcomes, never vendors.**
 
 ## Before you start
 
-By contributing you agree to the [Contributor License Agreement](docs/legal/CLA.md).
-Contributions are licensed under PolyForm Noncommercial 1.0.0, matching the repository.
+By contributing you agree to the [Contributor License Agreement](legal/CLA.md).
+Contributions are licensed under the MIT License, matching the repository.
 
 For anything larger than a typo, open an issue first. A rule change is a change to
 engineering guidance that other people will apply to production pipelines — it
@@ -71,8 +71,13 @@ Rules live in `SKILL.md` under section 3, grouped by family.
 · scan · `container-image-scanning` · BLOCK · applies when `artifacts.container`, and not `runtime.serverless`
 **Requirement.** What must be true. Written as an outcome, not an implementation.
 **Why.** The engineering reason. This is the part people actually read.
-*SSDF PW.4.1 · SLSA build-L2 · OWASP CICD-SEC-4 · Curriculum: module-2-6*
+*SSDF PW.4.1 · SLSA build-L2 · OWASP CICD-SEC-4 · Curriculum: module-2-6 (Container Security Overview)*
 ```
+
+Every curriculum citation carries the module's real title, exactly as
+`references/dsb-curriculum.yaml` spells it. `validate_skill.py` rejects a bare
+`module-2-6`, because without the title an agent invents a plausible-sounding one
+and sends a learner looking for a module that does not exist under that name.
 
 ### Checklist
 
@@ -83,6 +88,12 @@ Rules live in `SKILL.md` under section 3, grouped by family.
       `DSB-SC`.
 - [ ] **Capability exists** in `references/capabilities.yaml`. Add it there first if
       genuinely new — and check it is not an existing capability under another name.
+- [ ] **Capability is what actually satisfies the rule**, not the nearest-sounding
+      entry in the registry. Resolution keys on capability, so a rule pointed at an
+      adjacent capability reports itself REUSE the moment the organization declares
+      any tool providing that other thing. Ask: *would a tool that does only this
+      capability genuinely satisfy this requirement?* If not, the rule needs a
+      different capability, or a new one.
 - [ ] **Applicability references only closed-vocabulary fields** from the Workload
       Profile in `SKILL.md` §2.
 - [ ] **Applicability never references `ownership` or `existing_controls`.** Those
@@ -111,6 +122,23 @@ answer, the rule is probably too broad.
 
 ---
 
+## Commands stay thin
+
+`commands/` holds the `/devsecops-engineer:*` entry points. Each one selects an
+operating mode, passes the user's arguments in, and points at `SKILL.md`. That is all
+they may do.
+
+**No rule logic in a command.** No rule IDs, no enforcement levels, no applicability
+conditions, no capability lists, no output tables. The moment a command restates part
+of the catalog, there are two catalogs, and the one nobody validates starts drifting —
+so `/devsecops-engineer:assess` and a plain "review this pipeline" begin giving
+different answers. `tests/test_commands.py` enforces this.
+
+If a command feels like it needs a rule, the rule belongs in `SKILL.md` where the
+validator can see it, and the command should say which mode to run instead.
+
+---
+
 ## Changing the methodology
 
 The four phases, the twenty baseline principles, and the enforcement model come from
@@ -126,7 +154,7 @@ diverge from it.
 
 ## Generated files
 
-`references/framework-mappings.md` is generated from the mappings lines in `SKILL.md`.
+`docs/framework-mappings.md` is generated from the mappings lines in `SKILL.md`.
 Do not edit it by hand:
 
 ```bash
@@ -138,7 +166,7 @@ python tools/generate_mappings.py --check   # exit 1 if it is out of date
 touches mappings will fail CI until it is regenerated.
 
 The YAML files under `rules/` are a partial projection of the catalog with a
-deliberately limited scope — read [`rules/README.md`](rules/README.md) before adding
+deliberately limited scope — read [`rules/README.md`](../rules/README.md) before adding
 to them.
 
 ---

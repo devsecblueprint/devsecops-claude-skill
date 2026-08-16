@@ -7,7 +7,7 @@ body:
       value: |
         If the problem is that generated configuration would introduce a real
         security weakness, report it privately instead — see
-        [SECURITY.md](https://github.com/devsecblueprint/devsecops-claude-skill/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/devsecblueprint/devsecops-claude-skill/blob/main/docs/SECURITY.md).
 
   - type: dropdown
     id: area

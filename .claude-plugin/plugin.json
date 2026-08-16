@@ -1,0 +1,24 @@
+{
+  "name": "devsecops-engineer",
+  "version": "0.1.0",
+  "description": "Advise on, design, and assess CI/CD delivery pipelines using The DevSec Blueprint's Build → Test → Scan → Deploy DevSecOps engineering methodology.",
+  "author": {
+    "name": "The DevSec Blueprint",
+    "url": "https://github.com/devsecblueprint"
+  },
+  "homepage": "https://github.com/devsecblueprint/devsecops-claude-skill",
+  "repository": "https://github.com/devsecblueprint/devsecops-claude-skill",
+  "license": "MIT",
+  "keywords": [
+    "devsecops",
+    "cicd",
+    "pipeline",
+    "appsec",
+    "supply-chain",
+    "sast",
+    "sca",
+    "sbom",
+    "ssdf",
+    "slsa"
+  ]
+}

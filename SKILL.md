@@ -15,8 +15,8 @@ description: >
 # DSB DevSecOps Engineering
 
 Maintained by [The DevSec Blueprint](https://github.com/devsecblueprint).
-PolyForm Noncommercial 1.0.0 — commercial use requires prior written authorization
-from The DevSec Blueprint LLC.
+MIT licensed. DSB names, logos, and curriculum content are not covered by that
+license.
 
 > **DSB defines the required capabilities and engineering outcomes.
 > The organization determines how those capabilities are implemented.**
@@ -238,7 +238,7 @@ Format: **ID — Title** · phase · capability · default enforcement · applic
 ### DSB-BUILD — build and artifact creation
 
 **DSB-BUILD-001 — Builds execute from version-controlled source**
-· build · `sbom-generation` · BLOCK · applies when `source.host exists`
+· build · `build-traceability` · BLOCK · applies when `source.host exists`
 **Requirement.** Every deployable artifact must be produced by an automated build
 executing from a specific, identifiable commit, and must be traceable back to it.
 **Why.** An artifact that cannot be traced to a commit cannot be reviewed, reproduced,
@@ -247,7 +247,7 @@ control; without it, scan results cannot be tied to what shipped.
 *SSDF PS.1.1, PS.3.1 · SLSA build-L1 · CNCF build-integrity · Curriculum: module-2-1 (What is the Secure SDLC?), module-2-4 (DevSecOps Fundamentals)*
 
 **DSB-BUILD-002 — Dependency resolution is controlled and repeatable**
-· build · `sbom-generation` · BLOCK · applies when `package_managers exists`
+· build · `dependency-resolution-control` · BLOCK · applies when `package_managers exists`
 **Requirement.** Dependencies must resolve through a controlled source with pinned or
 locked versions, such that the same commit produces the same dependency set.
 **Why.** Unpinned resolution means the artifact you scanned and the artifact you ship
@@ -264,7 +264,7 @@ rebuilding. It is the difference between "are we exposed?" taking minutes or wee
 *SSDF PS.3.2 · SLSA build-L2 · CNCF sbom · Curriculum: module-2-4 (DevSecOps Fundamentals)*
 
 **DSB-BUILD-004 — Build environments are ephemeral**
-· build · `pipeline-configuration-scanning` · WARN · applies when `cicd.runners exists`
+· build · `build-environment-isolation` · WARN · applies when `cicd.runners exists`
 **Requirement.** Builds run in clean, disposable environments rather than long-lived
 mutable agents carrying state between builds.
 **Why.** Persistent agents accumulate credentials, caches, and artifacts from other
@@ -402,7 +402,7 @@ delivery pressure. Encoded policy applies identically to everyone at 3am.
 *SSDF PO.1.1 · Curriculum: module-3-7 (IaC Security)*
 
 **DSB-IAC-004 — Infrastructure changes are reviewed before application to production**
-· deploy · `policy-as-code-enforcement` · BLOCK · applies when `iac.present` and
+· deploy · `deployment-gating` · BLOCK · applies when `iac.present` and
 `deploy.environments` includes production
 **Requirement.** The planned change set must be produced and reviewed before applying
 infrastructure changes to production.
@@ -413,7 +413,7 @@ the systems needed to fix them. The plan is the last cheap checkpoint.
 ### DSB-SRC — source control security
 
 **DSB-SRC-001 — Deployable branches are protected**
-· cross-cutting · `pipeline-configuration-scanning` · BLOCK · applies when `source.host exists`
+· cross-cutting · `source-control-hardening` · BLOCK · applies when `source.host exists`
 **Requirement.** Branches that trigger deployment must prevent direct pushes, force
 pushes, and unreviewed changes.
 **Why.** Every downstream control is worthless if code can reach the deployable branch
@@ -421,7 +421,7 @@ without passing through the pipeline that enforces them.
 *SSDF PO.5.2 · OWASP CICD-SEC-1 · Curriculum: module-2-1 (What is the Secure SDLC?)*
 
 **DSB-SRC-002 — Changes are reviewed before merge**
-· cross-cutting · `pipeline-configuration-scanning` · BLOCK · applies when `source.host exists`
+· cross-cutting · `source-control-hardening` · BLOCK · applies when `source.host exists`
 **Requirement.** Changes to deployable branches require review by someone other than
 the author.
 **Why.** Review is the only control that catches intent. Automation catches known
@@ -429,7 +429,7 @@ patterns; it does not catch a deliberate or subtle logic change.
 *SSDF PW.7.1 · SLSA source-L2 · Curriculum: module-2-3 (Secure Coding Overview)*
 
 **DSB-SRC-003 — Untrusted contributions cannot access privileged pipeline context**
-· cross-cutting · `pipeline-configuration-scanning` · BLOCK · applies when
+· cross-cutting · `source-control-hardening` · BLOCK · applies when
 `source.fork_prs_allowed`
 **Requirement.** Pipelines triggered by untrusted contributions must not have access
 to deployment credentials, production secrets, or privileged runners.
@@ -441,7 +441,7 @@ only the default configuration.
 ### DSB-SC — software supply chain
 
 **DSB-SC-001 — Dependencies resolve through a controlled source**
-· build · `software-composition-analysis` · WARN · applies when `package_managers exists`
+· build · `dependency-resolution-control` · WARN · applies when `package_managers exists`
 **Requirement.** Builds resolve dependencies through an organizationally controlled
 registry or proxy rather than reaching public registries directly.
 **Why.** A controlled proxy gives you an inventory of what actually entered your
@@ -506,7 +506,7 @@ artifact you ran can differ, which silently invalidates every scan result you ho
 ### DSB-DEPLOY — deployment and promotion
 
 **DSB-DEPLOY-001 — Only artifacts that passed required controls are deployed**
-· deploy · `artifact-integrity-verification` · BLOCK · applies when `deploy.targets exists`
+· deploy · `deployment-gating` · BLOCK · applies when `deploy.targets exists`
 **Requirement.** Deployment must be conditional on the applicable Build, Test, and
 Scan requirements having passed, or on a recorded exception.
 **Why.** This is the whole point of the phase ordering. Controls that do not gate
@@ -515,7 +515,7 @@ deliberate one.
 *SSDF PW.8.2, RV.1.1 · Curriculum: module-2-1 (What is the Secure SDLC?)*
 
 **DSB-DEPLOY-002 — Validated artifacts are promoted, not rebuilt**
-· deploy · `artifact-integrity-verification` · BLOCK · applies when
+· deploy · `deployment-gating` · BLOCK · applies when
 `deploy.environments` has more than one environment
 **Requirement.** Progression between environments promotes the already-validated
 artifact rather than rebuilding from source per environment.
@@ -524,7 +524,7 @@ different artifact than the one running in production. The evidence becomes fict
 *SLSA build-L2 · SSDF PS.3.1 · Curriculum: module-2-4 (DevSecOps Fundamentals)*
 
 **DSB-DEPLOY-003 — Production deployment follows validation in a lower environment**
-· deploy · `artifact-integrity-verification` · WARN · applies when `deploy.environments`
+· deploy · `deployment-gating` · WARN · applies when `deploy.environments`
 includes both production and a non-production environment
 **Requirement.** Artifacts reach production only after being deployed and validated in
 at least one lower environment.
@@ -534,7 +534,7 @@ run safely.
 *SSDF RV.1.1 · Curriculum: module-2-1 (What is the Secure SDLC?)*
 
 **DSB-DEPLOY-004 — Deployment is automated and reproducible**
-· deploy · `artifact-integrity-verification` · WARN · applies when `deploy.targets exists`
+· deploy · `deployment-gating` · WARN · applies when `deploy.targets exists`
 **Requirement.** Deployment executes through automation from recorded configuration
 rather than manual operator steps.
 **Why.** Manual deployment is unreviewable, unrepeatable, and unattributable. It also
@@ -544,7 +544,7 @@ means the credentials involved are held by people rather than scoped to a system
 ### DSB-ID — workload identity, authentication, authorization
 
 **DSB-ID-001 — Pipelines authenticate with short-lived federated identity**
-· cross-cutting · `pipeline-configuration-scanning` · WARN · applies when `identity.mechanism exists`
+· cross-cutting · `workload-identity-management` · WARN · applies when `identity.mechanism exists`
 **Requirement.** Where the platform and target support it, pipelines authenticate
 using short-lived federated workload identity rather than long-lived static credentials.
 **Why.** A static credential in CI is a permanent, copyable, widely-readable key to
@@ -552,7 +552,7 @@ production. Federated identity makes stolen credentials expire on their own.
 *SSDF PO.5.1 · OWASP CICD-SEC-2 · Curriculum: module-3-2 (IAM Fundamentals)*
 
 **DSB-ID-002 — Deployment identity follows least privilege**
-· cross-cutting · `pipeline-configuration-scanning` · BLOCK · applies when `deploy.targets exists`
+· cross-cutting · `workload-identity-management` · BLOCK · applies when `deploy.targets exists`
 **Requirement.** Deployment credentials are scoped to the specific environment and
 resources they deploy, not shared across projects or environments.
 **Why.** A single over-scoped deployment identity converts a compromise of the least
@@ -560,7 +560,7 @@ important pipeline into a compromise of everything it can reach.
 *SSDF PO.5.1 · OWASP CICD-SEC-2 · Curriculum: module-3-2 (IAM Fundamentals)*
 
 **DSB-ID-003 — Secrets are not stored in pipeline definitions or source**
-· cross-cutting · `secret-scanning` · BLOCK · applies when `cicd.platform exists`
+· cross-cutting · `secrets-management` · BLOCK · applies when `cicd.platform exists`
 **Requirement.** Credentials are supplied through a secret store or platform secret
 mechanism, never committed to source or embedded in pipeline definitions.
 **Why.** Anything in the repository is readable by everyone with repository access,
@@ -568,7 +568,7 @@ retained in history, and copied into every clone and fork.
 *SSDF PO.5.2 · OWASP CICD-SEC-6 · Curriculum: module-3-4 (Secrets Management In The Cloud)*
 
 **DSB-ID-004 — Environment credentials are separated**
-· cross-cutting · `pipeline-configuration-scanning` · BLOCK · applies when
+· cross-cutting · `workload-identity-management` · BLOCK · applies when
 `deploy.environments` has more than one environment
 **Requirement.** Each environment uses distinct credentials, and non-production
 pipelines cannot obtain production credentials.
@@ -579,7 +579,7 @@ compromise of production. Non-production is always the least protected.
 ### DSB-EVD — evidence, logging, observability
 
 **DSB-EVD-001 — Security control results are retained as evidence**
-· cross-cutting · `pipeline-configuration-scanning` · REPORT · applies when `cicd.platform exists`
+· cross-cutting · `pipeline-evidence-retention` · REPORT · applies when `cicd.platform exists`
 **Requirement.** Scan results and control outcomes are retained and associated with
 the artifact and commit they describe.
 **Why.** A control that leaves no record cannot demonstrate it ran, cannot support an
@@ -587,7 +587,7 @@ audit, and cannot be compared over time to show whether anything improved.
 *SSDF PO.4.1, RV.1.1 · Curriculum: module-3-5 (Cloud Logging and Monitoring)*
 
 **DSB-EVD-002 — Pipeline execution is auditable**
-· cross-cutting · `pipeline-configuration-scanning` · REPORT · applies when `cicd.platform exists`
+· cross-cutting · `pipeline-evidence-retention` · REPORT · applies when `cicd.platform exists`
 **Requirement.** Pipeline runs record what was built, from what source, by whom or what
 trigger, and what was deployed where.
 **Why.** During an incident the first questions are what shipped, when, and from what
@@ -595,7 +595,7 @@ commit. Without an audit trail those questions take days.
 *SSDF PO.4.1 · OWASP CICD-SEC-10 · Curriculum: module-3-5 (Cloud Logging and Monitoring)*
 
 **DSB-EVD-003 — Findings reach an owning team**
-· cross-cutting · `pipeline-configuration-scanning` · REPORT · applies when
+· cross-cutting · `security-findings-management` · REPORT · applies when
 any scanning capability resolves to REUSE or GAP
 **Requirement.** Security findings are routed to the team that owns remediation, not
 left only in pipeline output.
@@ -606,7 +606,7 @@ reason a technically correct pipeline produces no security improvement.
 ### DSB-EXC — exceptions and risk acceptance
 
 **DSB-EXC-001 — Exceptions are explicit, owned, and time-bound**
-· cross-cutting · `policy-as-code-enforcement` · BLOCK · applies when
+· cross-cutting · `exception-management` · BLOCK · applies when
 `policy.exception_process` or any control resolves to BLOCK
 **Requirement.** Bypassing a BLOCK-level control requires a recorded exception with a
 named owner, a stated rationale, and an expiry date.
@@ -615,7 +615,7 @@ bypasses are not — and without expiry every exception becomes permanent by def
 *SSDF RV.2.2 · OWASP SAMM governance-policy · Curriculum: module-2-1 (What is the Secure SDLC?)*
 
 **DSB-EXC-002 — Suppressions reference an exception**
-· cross-cutting · `policy-as-code-enforcement` · WARN · applies when any scanning
+· cross-cutting · `exception-management` · WARN · applies when any scanning
 capability resolves to REUSE
 **Requirement.** In-code or in-tool suppressions of security findings must reference
 the exception authorizing them.
@@ -642,11 +642,19 @@ DSB requires **capabilities, never vendors**.
 
 | Group | Capabilities |
 |---|---|
-| Application and repository | `sast`, `software-composition-analysis`, `secret-scanning`, `license-compliance-analysis` |
-| Infrastructure and platform | `iac-scanning`, `kubernetes-configuration-scanning`, `policy-as-code-enforcement`, `pipeline-configuration-scanning` |
-| Artifact and supply chain | `container-image-scanning`, `sbom-generation`, `artifact-integrity-verification`, `artifact-signing`, `build-provenance` |
+| Application and repository | `sast`, `software-composition-analysis`, `secret-scanning`, `license-compliance-analysis`, `source-control-hardening` |
+| Infrastructure and platform | `iac-scanning`, `kubernetes-configuration-scanning`, `policy-as-code-enforcement`, `pipeline-configuration-scanning`, `build-environment-isolation`, `secrets-management`, `workload-identity-management` |
+| Artifact and supply chain | `container-image-scanning`, `sbom-generation`, `artifact-integrity-verification`, `artifact-signing`, `build-provenance`, `build-traceability`, `dependency-resolution-control`, `deployment-gating` |
 | Dynamic and post-deployment | `dast`, `api-security-testing` |
+| Governance and evidence | `pipeline-evidence-retention`, `security-findings-management`, `exception-management` |
 | Engineering | `automated-testing` (not a security control) |
+
+**Capabilities are distinguished by what actually satisfies them, not by what sounds
+adjacent.** `secret-scanning` detects committed secrets; `secrets-management` supplies
+credentials from a store. `dependency-resolution-control` makes resolution repeatable;
+`software-composition-analysis` examines what was resolved. Because resolution keys on
+capability, collapsing two of these into one makes a tool that provides only the first
+report the second as satisfied.
 
 **Advanced, organization-dependent** — fuzz testing, IAST, specialized compliance
 scanners, proprietary internal tools, penetration testing workflows. Not baseline.

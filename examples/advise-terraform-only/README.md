@@ -49,17 +49,17 @@ secret scanning (DSB-SCAN-003).
 |---|---|---|
 | DSB-IAC-001 | `iac-scanning` | BLOCK (default) |
 | DSB-IAC-003 | `policy-as-code-enforcement` | WARN (default) |
-| DSB-IAC-004 | reviewed plan before production apply | BLOCK (default) |
-| DSB-TEST-002 | infrastructure validation | BLOCK (default) |
+| DSB-IAC-004 | `deployment-gating` | BLOCK (default) |
+| DSB-TEST-002 | `automated-testing` | BLOCK (default) |
 | DSB-SCAN-003 | `secret-scanning` | BLOCK (default) |
 | DSB-SCAN-005 | `pipeline-configuration-scanning` | WARN (default) |
-| DSB-SRC-001 | protected branches | BLOCK (default) |
-| DSB-SRC-002 | review before merge | BLOCK (default) |
-| DSB-SC-002 | pinned pipeline components | BLOCK (default) |
-| DSB-BUILD-001 | traceable to a commit | BLOCK (default) |
-| DSB-EVD-001 | evidence retention | REPORT (default) |
-| DSB-EVD-002 | auditable execution | REPORT (default) |
-| DSB-EXC-003 | no inline suppression | BLOCK (default) |
+| DSB-SRC-001 | `source-control-hardening` | BLOCK (default) |
+| DSB-SRC-002 | `source-control-hardening` | BLOCK (default) |
+| DSB-SC-002 | `pipeline-configuration-scanning` | BLOCK (default) |
+| DSB-BUILD-001 | `build-traceability` | BLOCK (default) |
+| DSB-EVD-001 | `pipeline-evidence-retention` | REPORT (default) |
+| DSB-EVD-002 | `pipeline-evidence-retention` | REPORT (default) |
+| DSB-EXC-003 | `pipeline-configuration-scanning` | BLOCK (default) |
 
 Secret scanning matters more here than in a typical application repository, not less
 — Terraform repositories accumulate provider credentials, connection strings, and

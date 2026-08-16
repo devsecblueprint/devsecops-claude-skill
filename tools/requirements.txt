@@ -1,3 +1,13 @@
-PyYAML>=6.0.2
-jsonschema>=4.23.0
-pytest>=8.3.0
+# Pinned exactly, not floored with `>=`.
+#
+# DSB-BUILD-002 (BLOCK) requires dependency resolution to be repeatable: the
+# same commit must produce the same dependency set. A `>=` floor means CI
+# resolves whatever was published that morning, so a run that passes today and
+# fails tomorrow tells you nothing about the commit. This repository applies its
+# own rules.
+#
+# Dependabot (see .github/dependabot.yml) proposes the bumps, which is what
+# keeps pinning maintainable rather than a one-time gesture.
+PyYAML==6.0.3
+jsonschema==4.26.0
+pytest==9.1.1

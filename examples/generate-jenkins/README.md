@@ -46,7 +46,7 @@ policy:            { enforcement_posture: strict, dast_prod_authorized: false }
 | `software-composition-analysis` | **REUSE — Black Duck** | DSB-SCAN-002 |
 | `container-image-scanning` | **REUSE — Prisma Cloud** | DSB-SCAN-004 |
 | `artifact-integrity-verification` | **REUSE — Artifactory** | DSB-ART-001, DSB-ART-004 |
-| controlled dependency source | **REUSE — Artifactory virtual repo** | DSB-SC-001 |
+| `dependency-resolution-control` | **REUSE — Artifactory virtual repo** | DSB-SC-001 |
 | `secret-scanning` | GAP or DELEGATED — see below | DSB-SCAN-003 |
 | `sbom-generation` | GAP | DSB-BUILD-003 |
 | `dast` | GAP | DSB-SCAN-006 |

@@ -20,11 +20,21 @@ jobs:
         with:
           python-version: "3.13"
 
+      # DSB-BUILD-002: requirements.txt pins direct dependencies exactly, so a
+      # given commit resolves the same versions of the tools CI runs. Transitive
+      # versions still float — a fully hashed lock file is the next step up, and
+      # is only worth it if this repository starts shipping an executable
+      # artifact rather than Markdown.
       - name: Install dependencies
         run: pip install -r tools/requirements.txt
 
       - name: Validate SKILL.md
         run: python tools/validate_skill.py
+
+      # DSB-EVD-001: the generated index must match SKILL.md. tests/ covers this
+      # too; running it here names the fix in the failure output.
+      - name: Check generated mappings are current
+        run: python tools/generate_mappings.py --check
 
       - name: Run tests
         run: python -m pytest -v

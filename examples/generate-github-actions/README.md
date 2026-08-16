@@ -27,12 +27,12 @@ Nothing here is inferred. Every field was stated by the requester.
 
 | Rule | Capability | Resolution | Phase | Enforcement |
 |---|---|---|---|---|
-| DSB-BUILD-001 | traceable build | GAP → implemented | build | BLOCK (default) |
-| DSB-BUILD-002 | pinned dependencies | GAP → `npm ci` | build | BLOCK (default) |
+| DSB-BUILD-001 | `build-traceability` | GAP → implemented | build | BLOCK (default) |
+| DSB-BUILD-002 | `dependency-resolution-control` | GAP → `npm ci` | build | BLOCK (default) |
 | DSB-BUILD-003 | `sbom-generation` | GAP → CycloneDX | build | WARN (default) |
-| DSB-BUILD-004 | ephemeral build env | SATISFIED by hosted runners | build | WARN (default) |
+| DSB-BUILD-004 | `build-environment-isolation` | SATISFIED by hosted runners | build | WARN (default) |
 | DSB-TEST-001 | `automated-testing` | GAP → unit + integration | test | BLOCK (default) |
-| DSB-TEST-002 | infra validation | GAP → `terraform validate` | test | BLOCK (default) |
+| DSB-TEST-002 | `automated-testing` | GAP → `terraform validate` | test | BLOCK (default) |
 | DSB-SCAN-001 | `sast` | GAP → SAST scanner | scan | BLOCK (default) |
 | DSB-SCAN-002 | `software-composition-analysis` | GAP → dependency audit | scan | BLOCK (default) |
 | DSB-SCAN-003 | `secret-scanning` | GAP → history scan | scan | BLOCK (default) |
@@ -40,18 +40,18 @@ Nothing here is inferred. Every field was stated by the requester.
 | DSB-SCAN-005 | `pipeline-configuration-scanning` | GAP → workflow assertions | scan | WARN (default) |
 | DSB-SCAN-006 | `dast` | GAP → staging DAST | post-deploy | WARN (default) |
 | DSB-IAC-001 | `iac-scanning` | GAP → Terraform config scan | scan | BLOCK (default) |
-| DSB-SC-002 | pinned pipeline components | GAP → SHA-pin assertion | cross-cutting | BLOCK (default) |
-| DSB-ART-001 | controlled registry | GAP → ECR push | deploy | BLOCK (default) |
+| DSB-SC-002 | `pipeline-configuration-scanning` | GAP → SHA-pin assertion | cross-cutting | BLOCK (default) |
+| DSB-ART-001 | `artifact-integrity-verification` | GAP → ECR push | deploy | BLOCK (default) |
 | DSB-ART-003 | `build-provenance` | GAP → attestation | build | WARN (default) |
-| DSB-ART-004 | deploy by immutable id | GAP → deploy by digest | deploy | BLOCK (default) |
-| DSB-DEPLOY-001 | gated deployment | GAP → job `needs` graph | deploy | BLOCK (default) |
-| DSB-DEPLOY-002 | promote, don't rebuild | GAP → one build, two deploys | deploy | BLOCK (default) |
-| DSB-DEPLOY-003 | staging before production | GAP → job ordering | deploy | WARN (default) |
-| DSB-ID-001 | federated identity | GAP → OIDC role assumption | cross-cutting | WARN (default) |
-| DSB-ID-002 | least privilege | GAP → scoped `permissions` | cross-cutting | BLOCK (default) |
-| DSB-ID-004 | environment separation | GAP → per-environment roles | cross-cutting | BLOCK (default) |
-| DSB-EVD-001 | evidence retention | GAP → 90-day artifacts | cross-cutting | REPORT (default) |
-| DSB-EXC-003 | no inline suppression | GAP → suppression assertion | cross-cutting | BLOCK (default) |
+| DSB-ART-004 | `artifact-integrity-verification` | GAP → deploy by digest | deploy | BLOCK (default) |
+| DSB-DEPLOY-001 | `deployment-gating` | GAP → job `needs` graph | deploy | BLOCK (default) |
+| DSB-DEPLOY-002 | `deployment-gating` | GAP → one build, two deploys | deploy | BLOCK (default) |
+| DSB-DEPLOY-003 | `deployment-gating` | GAP → job ordering | deploy | WARN (default) |
+| DSB-ID-001 | `workload-identity-management` | GAP → OIDC role assumption | cross-cutting | WARN (default) |
+| DSB-ID-002 | `workload-identity-management` | GAP → scoped `permissions` | cross-cutting | BLOCK (default) |
+| DSB-ID-004 | `workload-identity-management` | GAP → per-environment roles | cross-cutting | BLOCK (default) |
+| DSB-EVD-001 | `pipeline-evidence-retention` | GAP → 90-day artifacts | cross-cutting | REPORT (default) |
+| DSB-EXC-003 | `pipeline-configuration-scanning` | GAP → suppression assertion | cross-cutting | BLOCK (default) |
 
 **Not applicable:**
 
@@ -88,12 +88,30 @@ is not authorization (DSB-SCAN-006).
 A static key in CI is a permanent, copyable credential to production
 (DSB-ID-001, DSB-ID-004).
 
+**Tests gate the scans.** The three scan jobs run in parallel with each other but
+all depend on `test`. Scanning alongside testing would spend scanner capacity and
+wall-clock time on an artifact a failing unit test already disqualified
+(DSB-TEST-001).
+
 **The pipeline audits itself.** Two assertions fail the build if a third-party action
 is unpinned (DSB-SC-002) or if any security step has been neutralized with
 `|| true` or `continue-on-error` (DSB-EXC-003).
 
+Both hold their patterns in `env` and bracket-escape them, so neither assertion
+matches its own source. A self-matching check fails on a clean repository, which
+looks identical to a real finding and is how these checks end up deleted. The
+suppression check also allows a line annotated `# DSB-WARN: <rule-id>`, because
+`continue-on-error` is how this platform expresses a WARN-level control (§5.2) —
+what DSB-EXC-003 forbids is the undeclared kind.
+
 ## Before using this
 
+- **Set the repository variables it reads.** `ECR_REGISTRY` (the registry host,
+  which is what makes `docker push` reach the controlled registry rather than the
+  public default), `AWS_ECR_PUBLISH_ROLE`, `AWS_DEPLOY_ROLE_STAGING`,
+  `AWS_DEPLOY_ROLE_PRODUCTION`, and `STAGING_URL`. The publish role is deliberately
+  separate from the deployment roles — the build job has no reason to hold either
+  (DSB-ID-002).
 - **Pin the scanner images by digest.** This example pins them by version tag for
   readability. Production use should pin by digest.
 - **Verify the action SHAs.** Those shown correspond to the tagged versions in

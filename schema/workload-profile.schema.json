@@ -12,6 +12,12 @@
         { "const": "unknown" }
       ]
     },
+    "stringlist": {
+      "oneOf": [
+        { "type": "array", "items": { "type": "string" } },
+        { "const": "unknown" }
+      ]
+    },
     "control": {
       "type": "object",
       "additionalProperties": false,
@@ -33,18 +39,13 @@
       "properties": {
         "host": { "type": "string", "enum": ["github", "gitlab", "bitbucket", "azure-repos", "other", "unknown"] },
         "protected_branches": { "$ref": "#/$defs/tristate" },
-        "review_required": { "$ref": "#/$defs/tristate" }
+        "review_required": { "$ref": "#/$defs/tristate" },
+        "fork_prs_allowed": { "$ref": "#/$defs/tristate" }
       }
     },
 
-    "languages": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
-    "package_managers": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
+    "languages": { "$ref": "#/$defs/stringlist" },
+    "package_managers": { "$ref": "#/$defs/stringlist" },
 
     "artifacts": {
       "type": "object",
@@ -63,7 +64,7 @@
       "additionalProperties": false,
       "properties": {
         "present": { "$ref": "#/$defs/tristate" },
-        "tools": { "type": "array", "items": { "type": "string" } }
+        "tools": { "$ref": "#/$defs/stringlist" }
       }
     },
 
@@ -82,8 +83,8 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "targets": { "type": "array", "items": { "type": "string" } },
-        "environments": { "type": "array", "items": { "type": "string" } },
+        "targets": { "$ref": "#/$defs/stringlist" },
+        "environments": { "$ref": "#/$defs/stringlist" },
         "promotion_model": { "type": "string", "enum": ["rebuild", "promote", "unknown"] }
       }
     },
@@ -93,7 +94,8 @@
       "additionalProperties": false,
       "properties": {
         "platform": { "type": "string", "enum": ["github-actions", "jenkins", "gitlab-ci", "azure-devops", "other", "unknown"] },
-        "runners": { "type": "string", "enum": ["hosted", "self-hosted", "mixed", "unknown"] }
+        "runners": { "type": "string", "enum": ["hosted", "self-hosted", "mixed", "unknown"] },
+        "shared_library": { "$ref": "#/$defs/tristate" }
       }
     },
 
@@ -102,6 +104,15 @@
       "additionalProperties": false,
       "properties": {
         "mechanism": { "type": "string", "enum": ["oidc", "static-creds", "vault", "cloud-role", "other", "unknown"] }
+      }
+    },
+
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "present": { "$ref": "#/$defs/tristate" },
+        "controlled_proxy": { "$ref": "#/$defs/tristate" }
       }
     },
 
@@ -140,8 +151,10 @@
       "properties": {
         "enforcement_posture": { "type": "string", "enum": ["strict", "balanced", "advisory", "unknown"] },
         "exception_process": { "$ref": "#/$defs/tristate" },
-        "compliance_regimes": { "type": "array", "items": { "type": "string" } },
-        "dast_prod_authorized": { "$ref": "#/$defs/tristate" }
+        "compliance_regimes": { "$ref": "#/$defs/stringlist" },
+        "dast_prod_authorized": { "$ref": "#/$defs/tristate" },
+        "signing_required": { "$ref": "#/$defs/tristate" },
+        "provenance_required": { "$ref": "#/$defs/tristate" }
       }
     }
   }
