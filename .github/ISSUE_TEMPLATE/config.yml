@@ -12,6 +12,6 @@ contact_links:
     url: https://github.com/devsecblueprint/devsecblueprint/issues/new
     about: The four phases and baseline principles come from DSB curriculum — raise those on the platform repository.
 
-  - name: Commercial licensing
-    url: https://github.com/devsecblueprint/devsecops-claude-skill/blob/main/docs/legal/COMMERCIAL-LICENSING.md
-    about: Using this inside a company requires prior written authorization.
+  - name: Trademark and brand use
+    url: https://github.com/devsecblueprint/devsecops-claude-skill/blob/main/docs/legal/TRADEMARKS.md
+    about: The code is MIT. DSB names, logos, and curriculum content are not.

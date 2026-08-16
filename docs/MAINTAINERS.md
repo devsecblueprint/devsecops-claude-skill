@@ -10,8 +10,8 @@ The DSB DevSecOps Engineering Skill is owned and maintained by
 | **Owner** | The DevSec Blueprint LLC |
 | **Organization** | [github.com/devsecblueprint](https://github.com/devsecblueprint) |
 | **Community** | [Discord](https://discord.gg/enMmUNq8jc) |
-| **License** | PolyForm Noncommercial 1.0.0 |
-| **Commercial licensing** | [docs/legal/COMMERCIAL-LICENSING.md](docs/legal/COMMERCIAL-LICENSING.md) |
+| **License** | MIT |
+| **Trademarks and brand** | [docs/legal/TRADEMARKS.md](legal/TRADEMARKS.md) |
 
 This skill is an implementation of DSB knowledge and standards. It is not the source
 of those standards — the DSB curriculum is. Where this skill and the curriculum
@@ -48,7 +48,7 @@ change agent behavior has not landed. Test against a live agent before merging.
 
 Do not open a public issue for a security problem in this repository or in guidance it
 produces. Contact the maintainers through the
-[DSB Discord](https://discord.gg/enMmUNq8jc) or the commercial licensing contact.
+[DSB Discord](https://discord.gg/enMmUNq8jc).
 
 ## Related
 

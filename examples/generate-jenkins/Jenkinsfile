@@ -12,7 +12,12 @@
 // Per-repository Jenkinsfiles should stay thin and call a shared library, so a
 // security policy change does not require a pull request against every service.
 
-@Library('platform-pipeline@v3') _
+// DSB-SC-002 (BLOCK, default): a shared library is a third-party pipeline
+// component and is pinned to an immutable commit, not to `@v3`. A moving tag
+// means whoever can push to the library changes what executes here, with these
+// credentials, with no change on this side. Jenkins accepts a commit hash as
+// the library version wherever it accepts a tag.
+@Library('platform-pipeline@4f9c1d2a8b3e6570c1d4a9f2e8b7c3d05a6e1f94') _  // v3.2.1
 
 pipeline {
     // DSB-BUILD-004 (WARN, default): ephemeral agents. Static nodes accumulate

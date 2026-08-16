@@ -37,10 +37,32 @@ def test_github_actions_example_is_valid_yaml():
 
 
 def test_github_actions_example_pins_third_party_actions():
-    """The examples must obey DSB-SC-002, which they teach."""
+    """The examples must obey DSB-SC-002, which they teach.
+
+    Deliberately not anchored to end-of-line: every pinned `uses:` in the
+    example carries a trailing `# v4.2.2` comment, so an end anchor would let
+    `uses: foo/bar@v1  # whatever` through — the exact thing this checks for.
+    """
     workflow = (EXAMPLES / "generate-github-actions" / "delivery.yml").read_text()
-    unpinned = re.findall(r"uses:\s*(\S+@(?:v[\d.]+|main|master))\s*$", workflow, re.MULTILINE)
+    unpinned = re.findall(
+        r"uses:\s*([^@\s]+@(?:v[\d.]+|main|master))\b", workflow
+    )
     assert not unpinned, f"unpinned action references: {unpinned}"
+
+
+def test_jenkins_example_pins_its_shared_library():
+    """DSB-SC-002 covers shared libraries too, not only GitHub Actions.
+
+    A Jenkins shared library executes inside the pipeline with its credentials.
+    `@Library('x@v3')` is a mutable reference and is the same defect as an
+    unpinned action.
+    """
+    jenkinsfile = (EXAMPLES / "generate-jenkins" / "Jenkinsfile").read_text()
+    for library, version in re.findall(r"@Library\(['\"]([^@'\"]+)@([^'\"]+)['\"]", jenkinsfile):
+        assert re.fullmatch(r"[0-9a-f]{40}", version), (
+            f"shared library {library!r} pinned to mutable reference {version!r} "
+            "— DSB-SC-002 requires an immutable commit"
+        )
 
 
 def test_no_example_suppresses_a_security_step():

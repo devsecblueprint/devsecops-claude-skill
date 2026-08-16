@@ -1,17 +1,21 @@
 # Ownership for The DSB DevSecOps Engineering Skill.
-# See MAINTAINERS.md. Later matches win, so the narrow rules come last.
+# See docs/MAINTAINERS.md. Later matches win, so the narrow rules come last.
 
 * @damienjburks
 
 # SKILL.md is the product. Every change to it is a change to guidance that
-# reaches users directly.
+# reaches users directly. commands/ and the plugin manifest define the public
+# entry points and the released version.
 /SKILL.md @damienjburks
+/commands/ @damienjburks
+/.claude-plugin/ @damienjburks
+/CHANGELOG.md @damienjburks
 
 # Rule content and the registries rules are validated against.
 /rules/ @damienjburks
 /references/ @damienjburks
 /schema/ @damienjburks
 
-# Licensing and contributor terms.
+# Project documentation, licensing, and contributor terms.
+/docs/ @damienjburks
 /LICENSE.md @damienjburks
-/docs/legal/ @damienjburks

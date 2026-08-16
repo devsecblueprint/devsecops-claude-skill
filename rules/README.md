@@ -42,7 +42,7 @@ apply based on how *other* controls resolve — whether anything came back `REUS
 `GAP`, or `BLOCK`. That is deliberately not expressible here. Applicability answers
 "does this risk exist for this workload?"; resolution answers "who satisfies it?"
 Mixing them destroys the `DELEGATED` outcome, and both
-[`CONTRIBUTING.md`](../CONTRIBUTING.md) and the validator forbid it. These rules
+[`CONTRIBUTING.md`](../docs/CONTRIBUTING.md) and the validator forbid it. These rules
 need a second evaluation pass, not a predicate.
 
 ## Adding a rule here

@@ -2,7 +2,7 @@ id: DSB-BUILD-001
 title: Builds execute from version-controlled source
 family: BUILD
 phase: build
-capability: sbom-generation
+capability: build-traceability
 requirement: >
   Every deployable artifact must be produced by an automated build that executes
   from a specific, identifiable commit in version control, and the resulting
@@ -22,7 +22,7 @@ enforcement:
   default_level: BLOCK
   automatable: true
 tooling:
-  examples: [Syft, CycloneDX, native CI build metadata]
+  examples: [native CI build metadata, Artifactory build-info, git commit pinning]
   prefer_existing_tool: true
 dsb_curriculum: [module-2-1, module-2-4]
 status: active

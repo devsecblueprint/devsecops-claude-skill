@@ -17,7 +17,7 @@ def test_generated_file_is_committed_and_current():
     """
     assert OUTPUT.exists(), f"{OUTPUT} is missing — run tools/generate_mappings.py"
     assert OUTPUT.read_text() == render(rules()), (
-        "references/framework-mappings.md is out of date — "
+        "docs/framework-mappings.md is out of date — "
         "run python tools/generate_mappings.py"
     )
 

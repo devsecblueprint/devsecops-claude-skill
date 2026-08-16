@@ -21,8 +21,11 @@ python -m pytest -q
 
 ```
 OK: 42 rules across 11 families, no violations
-47 passed
+64 passed
 ```
+
+The rule and family counts are asserted by `tests/test_validate_skill.py`, so they
+cannot drift silently. The test count is not — treat it as a floor, not a checksum.
 
 `validate_skill.py` checks rule ID uniqueness, capability-registry membership,
 curriculum citations resolving against the snapshot, valid phases and enforcement
@@ -38,13 +41,24 @@ installed as a single file.
 A validator nobody has seen fail is not a validator.
 
 ```bash
-# Break a curriculum citation
-sed -i 's/module-2-6, module-3-1/module-9-9/' SKILL.md
+# Break a curriculum citation. Note the module id is followed by its title in
+# SKILL.md — matching a bare `module-2-6` is what makes this edit land.
+python - <<'EOF'
+import pathlib
+p = pathlib.Path("SKILL.md")
+p.write_text(p.read_text().replace("module-2-6 (Container Security Overview)",
+                                   "module-9-9 (Container Security Overview)", 1))
+EOF
+
 python tools/validate_skill.py          # expect: FAIL, module-9-9 not in snapshot
-git checkout SKILL.md 2>/dev/null || sed -i 's/module-9-9/module-2-6, module-3-1/' SKILL.md
+git checkout SKILL.md
 ```
 
-The test suite covers 14 more failure modes this way — see
+**Confirm you saw the failure**, not just that the command ran. An edit that misses
+its target leaves the validator passing, which reads exactly like a validator that
+works — and is the failure mode this exercise exists to rule out.
+
+The test suite covers 21 more failure modes this way — see
 `tests/test_validate_skill.py`.
 
 ---

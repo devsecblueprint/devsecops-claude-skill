@@ -26,6 +26,10 @@ permissions:
 env:
   IMAGE_NAME: payments-api
   AWS_REGION: us-east-1
+  ECS_CLUSTER: payments
+  # DSB-ART-001: the controlled registry of record. Pushing a bare image name
+  # would publish to the public default registry instead.
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────
@@ -79,10 +83,15 @@ jobs:
       - run: npm run test:integration       # integration
 
   # ───────────────────────────────────────────────────────────────────────
-  # SCAN — source-layer controls. These need only the repository, so they run
-  # in parallel with test rather than waiting on it.
+  # SCAN — source-layer controls.
+  #
+  # DSB-TEST-001 (BLOCK) puts Test before Scan: failing fast on functional
+  # defects avoids spending scanner capacity and wall-clock time on an artifact
+  # that was never going to ship. The three scan jobs are parallel with each
+  # other, but all of them gate on test.
   # ───────────────────────────────────────────────────────────────────────
   scan-source:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -123,6 +132,7 @@ jobs:
   # DSB-IAC-001 (BLOCK) and DSB-TEST-002 (BLOCK): validate before apply.
   # ───────────────────────────────────────────────────────────────────────
   scan-infrastructure:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -142,23 +152,39 @@ jobs:
   # DSB-SCAN-005 (WARN, default) and DSB-SC-002 (BLOCK, default).
   # ───────────────────────────────────────────────────────────────────────
   scan-pipeline:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       # DSB-SC-002: every third-party action must be pinned to a commit SHA.
       # A mutable tag lets a third party change what runs with our credentials.
+      #
+      # The patterns below are bracket-escaped and held in env rather than
+      # written inline. A self-describing assertion that matches its own source
+      # fails on a clean repository, which is indistinguishable from a real
+      # finding and trains people to delete the check.
       - name: Assert actions are SHA-pinned
+        env:
+          UNPINNED: 'uses:[[:space:]]+[^@[:space:]]+@(v[0-9]|main|master)'
         run: |
-          if grep -rEn 'uses: [^@]+@(v[0-9]|main|master)' .github/workflows/; then
+          if grep -rEn "$UNPINNED" .github/workflows/; then
             echo "::error::unpinned action reference (DSB-SC-002)"
             exit 1
           fi
 
       # DSB-EXC-003: controls must not be neutralized inline.
+      #
+      # A WARN-level control legitimately uses `continue-on-error` — that is how
+      # this platform expresses WARN. The difference between WARN and a
+      # suppressed BLOCK is whether it was a decision, so a deliberate one is
+      # annotated `# DSB-WARN: <rule-id>` on the same line and anything else
+      # fails.
       - name: Assert no suppressed security steps
+        env:
+          SUPPRESSION: '[|][|][[:space:]]+true|continue-on-error:[[:space:]]*true'
         run: |
-          if grep -rEn '\|\| true|continue-on-error: true' .github/workflows/; then
+          if grep -rEn "$SUPPRESSION" .github/workflows/ | grep -v 'DSB-WARN:'; then
             echo "::error::security step suppression detected (DSB-EXC-003)"
             exit 1
           fi
@@ -178,6 +204,7 @@ jobs:
       packages: write
       attestations: write        # DSB-ART-003: build provenance
     outputs:
+      image: ${{ steps.push.outputs.image }}
       digest: ${{ steps.push.outputs.digest }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -186,34 +213,54 @@ jobs:
         with:
           name: build-output
 
-      - run: docker build -t "$IMAGE_NAME:${{ needs.build.outputs.version }}" .
+      # One tagged reference, derived once, used by build/scan/push. Repeating
+      # the expression at each step is how a pipeline ends up scanning one image
+      # and pushing another.
+      - name: Resolve the image reference
+        run: |
+          echo "IMAGE_REF=$ECR_REGISTRY/$IMAGE_NAME:${{ needs.build.outputs.version }}" \
+            >> "$GITHUB_ENV"
 
-      # DSB-SCAN-004: scan the local image before it is pushed.
+      - run: docker build -t "$IMAGE_REF" .
+
+      # DSB-SCAN-004: scan the local image before it is pushed. Everything
+      # below this step runs only if the scan passed.
       - name: Container image scan
         run: |
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy:0.58.1 image \
             --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
-            "$IMAGE_NAME:${{ needs.build.outputs.version }}"
+            "$IMAGE_REF"
 
       # DSB-ID-001 (WARN, default): short-lived federated identity. No
       # long-lived AWS keys are stored anywhere in this repository.
+      #
+      # DSB-ID-002 (BLOCK, default): this is a publish-only role. The build job
+      # never holds a deployment role — those are assumed by the deploy jobs,
+      # scoped per environment.
       - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
         with:
-          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_STAGING }}
+          role-to-assume: ${{ vars.AWS_ECR_PUBLISH_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # DSB-ART-001 (BLOCK, default): publish to a controlled registry.
+      # DSB-ART-001 (BLOCK, default): publish to the controlled registry.
       - id: push
         run: |
-          docker push "$IMAGE_NAME:${{ needs.build.outputs.version }}"
-          echo "digest=$(docker inspect --format='{{index .RepoDigests 0}}' \
-            "$IMAGE_NAME:${{ needs.build.outputs.version }}")" >> "$GITHUB_OUTPUT"
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+
+          docker push "$IMAGE_REF"
+
+          # DSB-ART-004: capture the immutable identity at push time. Everything
+          # downstream references this, never the tag.
+          REF=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_REF")
+          echo "image=$REF" >> "$GITHUB_OUTPUT"
+          echo "digest=${REF#*@}" >> "$GITHUB_OUTPUT"
 
       # DSB-ART-003 (WARN, default): attestable provenance.
       - uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
         with:
-          subject-name: ${{ env.IMAGE_NAME }}
+          subject-name: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
 
   # ───────────────────────────────────────────────────────────────────────
@@ -234,10 +281,30 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_STAGING }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # DSB-ART-004 (BLOCK, default): the service is pinned to the digest the
+      # scan passed against. Registering a revision that named the tag would
+      # let the running artifact drift from the scanned one.
       - name: Deploy by digest
+        env:
+          SERVICE: payments-api-staging
+          IMAGE: ${{ needs.image.outputs.image }}
         run: |
-          aws ecs deploy --service payments-api-staging \
-            --image "${{ needs.image.outputs.digest }}"
+          aws ecs describe-task-definition --task-definition "$SERVICE" \
+            --query taskDefinition --output json \
+            | jq --arg img "$IMAGE" \
+                '.containerDefinitions[0].image = $img
+                 | del(.taskDefinitionArn, .revision, .status, .registeredAt,
+                       .registeredBy, .requiresAttributes, .compatibilities)' \
+            > task-definition.json
+
+          REVISION=$(aws ecs register-task-definition \
+            --cli-input-json file://task-definition.json \
+            --query taskDefinition.taskDefinitionArn --output text)
+
+          aws ecs update-service --cluster "$ECS_CLUSTER" \
+            --service "$SERVICE" --task-definition "$REVISION"
+
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$SERVICE"
 
   # ───────────────────────────────────────────────────────────────────────
   # POST-DEPLOYMENT SCAN — controls that need a running workload.
@@ -273,7 +340,26 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_PRODUCTION }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # The same digest staging validated. No rebuild, no re-tag, no second
+      # scan of a different artifact (DSB-DEPLOY-002, DSB-ART-004).
       - name: Promote the validated artifact
+        env:
+          SERVICE: payments-api-production
+          IMAGE: ${{ needs.image.outputs.image }}
         run: |
-          aws ecs deploy --service payments-api-production \
-            --image "${{ needs.image.outputs.digest }}"
+          aws ecs describe-task-definition --task-definition "$SERVICE" \
+            --query taskDefinition --output json \
+            | jq --arg img "$IMAGE" \
+                '.containerDefinitions[0].image = $img
+                 | del(.taskDefinitionArn, .revision, .status, .registeredAt,
+                       .registeredBy, .requiresAttributes, .compatibilities)' \
+            > task-definition.json
+
+          REVISION=$(aws ecs register-task-definition \
+            --cli-input-json file://task-definition.json \
+            --query taskDefinition.taskDefinitionArn --output text)
+
+          aws ecs update-service --cluster "$ECS_CLUSTER" \
+            --service "$SERVICE" --task-definition "$REVISION"
+
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$SERVICE"

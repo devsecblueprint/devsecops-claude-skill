@@ -1,3 +1,4 @@
+import datetime
 import pathlib
 import re
 
@@ -23,6 +24,13 @@ def test_module_ids_are_unique_and_well_formed():
 
 
 def test_snapshot_records_its_source_and_date():
+    """Asserts the shape, not the value.
+
+    docs/CONTRIBUTING.md tells a maintainer to bump `snapshot_date` when refreshing
+    the curriculum. Pinning the literal here would turn following the documented
+    procedure into a CI failure, so this checks the field is present and is a
+    real date instead.
+    """
     data = load()
     assert data["source"]
-    assert data["snapshot_date"] == "2026-08-12"
+    datetime.date.fromisoformat(str(data["snapshot_date"]))

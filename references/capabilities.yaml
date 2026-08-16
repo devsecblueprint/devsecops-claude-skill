@@ -22,6 +22,13 @@ capabilities:
     summary: Analysis of dependency licenses against organizational policy.
     typical_phase: scan
 
+  - id: source-control-hardening
+    group: application-and-repository
+    summary: >
+      Branch protection, review enforcement, and trigger isolation on the
+      repositories that feed the pipeline.
+    typical_phase: cross-cutting
+
   - id: iac-scanning
     group: infrastructure-and-platform
     summary: Static analysis of infrastructure-as-code for insecure configuration.
@@ -41,6 +48,25 @@ capabilities:
     group: infrastructure-and-platform
     summary: Analysis of CI/CD configuration for insecure pipeline practices.
     typical_phase: scan
+
+  - id: build-environment-isolation
+    group: infrastructure-and-platform
+    summary: Provision of clean, disposable build environments per execution.
+    typical_phase: build
+
+  - id: secrets-management
+    group: infrastructure-and-platform
+    summary: >
+      Supply of credentials to the pipeline from a secret store rather than from
+      source or pipeline definitions. Distinct from detecting leaked secrets.
+    typical_phase: cross-cutting
+
+  - id: workload-identity-management
+    group: infrastructure-and-platform
+    summary: >
+      Issuance and scoping of the identities a pipeline authenticates with —
+      federation, least privilege, and per-environment separation.
+    typical_phase: cross-cutting
 
   - id: container-image-scanning
     group: artifact-and-supply-chain
@@ -67,6 +93,27 @@ capabilities:
     summary: Attestation describing how, where, and from what an artifact was built.
     typical_phase: build
 
+  - id: build-traceability
+    group: artifact-and-supply-chain
+    summary: >
+      Binding of every deployable artifact to the specific commit and automated
+      build that produced it.
+    typical_phase: build
+
+  - id: dependency-resolution-control
+    group: artifact-and-supply-chain
+    summary: >
+      Repeatable dependency resolution through a controlled source with pinned or
+      locked versions. Distinct from analysing what those dependencies contain.
+    typical_phase: build
+
+  - id: deployment-gating
+    group: artifact-and-supply-chain
+    summary: >
+      Conditioning deployment and environment promotion on the applicable controls
+      having passed, and on promoting rather than rebuilding.
+    typical_phase: deploy
+
   - id: dast
     group: dynamic-and-post-deployment
     summary: Dynamic security testing against a running instance of the workload.
@@ -76,6 +123,25 @@ capabilities:
     group: dynamic-and-post-deployment
     summary: Security testing of API surfaces against a running instance.
     typical_phase: post-deploy
+
+  - id: pipeline-evidence-retention
+    group: governance-and-evidence
+    summary: >
+      Retention of control results and execution records, associated with the
+      artifact and commit they describe.
+    typical_phase: cross-cutting
+
+  - id: security-findings-management
+    group: governance-and-evidence
+    summary: Routing of security findings to the team that owns remediation.
+    typical_phase: cross-cutting
+
+  - id: exception-management
+    group: governance-and-evidence
+    summary: >
+      Recording, ownership, and expiry of authorized bypasses of a security
+      control, and the suppressions that reference them.
+    typical_phase: cross-cutting
 
   - id: automated-testing
     group: engineering
