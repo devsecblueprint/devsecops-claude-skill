@@ -1,0 +1,13 @@
+{
+  "name": "devsecblueprint",
+  "owner": {
+    "name": "The DevSec Blueprint"
+  },
+  "plugins": [
+    {
+      "name": "devsecops-engineer",
+      "source": ".",
+      "description": "Advise on, design, and assess CI/CD delivery pipelines using The DevSec Blueprint DevSecOps Engineering methodology."
+    }
+  ]
+}
