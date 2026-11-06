@@ -10,4 +10,4 @@
 # keeps pinning maintainable rather than a one-time gesture.
 PyYAML==6.0.3
 jsonschema==4.26.0
-pytest==9.1.1
+pytest==9.2.0
